@@ -7,14 +7,23 @@
 
 package org.usfirst.frc.team6749.robot;
 
+import org.opencv.calib3d.StereoBM;
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.*;
+
+import edu.wpi.cscore.CvSink;
+import edu.wpi.cscore.CvSource;
+import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.wpilibj.ADXRS450_Gyro;
+import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
-import edu.wpi.first.wpilibj.drive.RobotDriveBase;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -24,15 +33,38 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
  * directory.
  */
 public class Robot extends IterativeRobot {
-
+	
+	//Sensors
+	 ADXRS450_Gyro gyro;
+	
 	Joystick driveJoystick;
 	
 	MecanumDrive drive;
+	
+	int cameraResolutionX = 225;
+	int cameraResolutionY = 165;
+	int cameraFPS = 20;
 	
 	SpeedController frontLeft;
 	SpeedController frontRight;
 	SpeedController backLeft;
 	SpeedController backRight;
+	
+	double speedScale = 1f;
+	double rotScale = 0.5f;
+	
+	double currentX;
+	double currentY;
+	double currentZ;
+	
+	double forwardThreshold = 0.1f;
+	double rotationThreshold = 0.25f;
+	double strafeThreshold = 0.25f;
+	
+	double forwardAcceleration = 0.035f;
+	double rotationAcceleration = 0.03f;
+	
+	double strafeScale = 0.8f;
 	
 	/**
 	 * This function is run when the robot is first started up and should be
@@ -41,17 +73,64 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void robotInit() {
 		
+		gyro = new ADXRS450_Gyro();
+		gyro.calibrate();
+		
 		//Init SpeedControllers
-		frontLeft = new Spark(0);
-		frontRight = new Spark (1);
+		frontLeft = new Spark(3);
+		frontRight = new Spark (0);
 		backLeft = new Spark (2);
-		backRight = new Spark (3);
+		backRight = new Spark (1);
 		
 		//Init mecanum drive train
 		drive = new MecanumDrive (frontLeft, backLeft, frontRight, backRight);
 		
 		//Init Joystick
 		driveJoystick = new Joystick(0);
+		
+		InitCameras();
+	}
+	
+	void InitCameras () {
+		
+		new Thread(() -> {
+            UsbCamera leftCamera = CameraServer.getInstance().startAutomaticCapture(0);
+            UsbCamera rightCamera = CameraServer.getInstance().startAutomaticCapture(1);
+            leftCamera.setFPS(cameraFPS);
+    		rightCamera.setFPS(cameraFPS);
+    		leftCamera.setResolution(cameraResolutionX, cameraResolutionY);
+    		rightCamera.setResolution(cameraResolutionX, cameraResolutionY);
+            
+            CvSink leftcvSink = CameraServer.getInstance().getVideo(leftCamera);
+            CvSink rightcvSink = CameraServer.getInstance().getVideo(rightCamera);
+            
+            CvSource processedStream = CameraServer.getInstance().putVideo("ProcessedOutput", cameraResolutionX, cameraResolutionY);
+            
+            Mat leftCameraMat = new Mat();
+            Mat rightCameraMat = new Mat();
+            
+            Mat processedOutput = new Mat ();
+            
+            while(!Thread.interrupted()) {
+            	rightCamera.setBrightness(leftCamera.getBrightness());
+            	
+            	leftcvSink.grabFrame(leftCameraMat);
+            	rightcvSink.grabFrame(rightCameraMat);
+
+	            
+	            if(leftCameraMat.empty() == false && rightCameraMat.empty() == false) {
+	            	
+	            	
+	            	StereoBM debth = StereoBM.create(16, 16);
+		            debth.compute(leftCameraMat, rightCameraMat, processedOutput);
+		            //Imgproc.cvtColor(leftCameraMat, processedOutput, Imgproc.COLOR_BGR2GRAY);
+		            processedStream.putFrame(processedOutput);
+	            }
+            }
+            
+            System.out.println("Interrupted.");
+            
+        }).start(); 
 	}
 
 	/**
@@ -67,7 +146,6 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousPeriodic() {
-		
 	}
 
 	/**
@@ -83,13 +161,74 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
-		double x = driveJoystick.getX();
-		double y = driveJoystick.getY();
-		double z = driveJoystick.getZ();
+		SmartDashboard.putNumber("Gyro", gyro.getAngle());
+		ManageDriveTrain();
 		
-		drive.driveCartesian(y, x, z);
 	}
 
+	void ManageDriveTrain () {
+		double x = driveJoystick.getY();
+		double y = driveJoystick.getX();
+		double z = driveJoystick.getZ();
+		
+		//Check rotation threshold
+		if(z > 0 && z < rotationThreshold) {
+			currentZ = 0;
+		} else if(z < 0 && -z < rotationThreshold) {
+			currentZ = 0;
+		} else {
+			//We are outside of the limits so lets accelerate towards the target
+			//currentZ = z;
+			if(z > currentZ) {
+				//Go positive
+				currentZ = (currentZ + rotationAcceleration);
+			}
+			if(z < currentZ) {
+				currentZ = (currentZ - rotationAcceleration);
+			}
+			//If we are within the amount needed to clip then clip the value
+			if(Math.abs(z - currentZ) < rotationAcceleration) {
+				currentZ = z;
+			}
+		}
+		
+		//Check Strafe threshold
+		if(y > 0 && y < strafeThreshold) {
+			currentY = 0;
+		} else if(y < 0 && -y < strafeThreshold) {
+			currentY = 0;
+		} else {
+			currentY = y * strafeScale;
+		}
+		
+		//Check forward threshold
+		if(x > 0 && x < forwardThreshold) {
+			currentX = 0;
+		} else if(x < 0 && -x < forwardThreshold) {
+			currentX = 0;
+		} else {
+			//We are outside of the limits so lets accelerate towards the target
+			//currentZ = z;
+			if(x > currentX) {
+				//Go positive
+				currentX = (currentX + forwardAcceleration);
+			}
+			if(x < currentX) {
+				currentX = (currentX - forwardAcceleration);
+			}
+			//If we are within the amount needed to clip then clip the value
+			if(Math.abs(x - currentX) < forwardAcceleration) {
+				currentX = x;
+			}
+		}
+		
+		SmartDashboard.putNumber("X", currentX);
+		SmartDashboard.putNumber("Strafe", currentY);
+		SmartDashboard.putNumber("Rotation", currentZ);
+		
+		drive.driveCartesian(-currentY * speedScale, -currentX * speedScale, currentZ * rotScale);
+	}
+	
 	/**
 	 * This function is called periodically during test mode.
 	 */
@@ -97,4 +236,5 @@ public class Robot extends IterativeRobot {
 	public void testPeriodic() {
 		
 	}
+	
 }
