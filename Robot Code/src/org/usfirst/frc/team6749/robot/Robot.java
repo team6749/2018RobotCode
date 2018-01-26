@@ -50,7 +50,6 @@ public class Robot extends IterativeRobot {
 	SpeedController backLeft;
 	SpeedController backRight;
 	
-	
 	double speedScale = 1f;
 	double rotScale = 0.5f;
 	
