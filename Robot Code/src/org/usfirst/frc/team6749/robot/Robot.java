@@ -17,6 +17,7 @@ import edu.wpi.cscore.CvSource;
 import edu.wpi.cscore.UsbCamera;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
+import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
@@ -24,6 +25,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
+import edu.wpi.first.wpilibj.XboxController;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -34,37 +36,19 @@ import edu.wpi.first.wpilibj.SpeedController;
  */
 public class Robot extends IterativeRobot {
 	
+	GPS gps;
+	
+	DriveController driveController;
+	
 	//Sensors
-	 ADXRS450_Gyro gyro;
+	ADXRS450_Gyro gyro;
+	BuiltInAccelerometer accelerometer;
 	
-	Joystick driveJoystick;
-	
-	MecanumDrive drive;
+	XboxController driveJoystick;
 	
 	int cameraResolutionX = 225;
 	int cameraResolutionY = 165;
 	int cameraFPS = 20;
-	
-	SpeedController frontLeft;
-	SpeedController frontRight;
-	SpeedController backLeft;
-	SpeedController backRight;
-	
-	double speedScale = 1f;
-	double rotScale = 0.5f;
-	
-	double currentX;
-	double currentY;
-	double currentZ;
-	
-	double forwardThreshold = 0.1f;
-	double rotationThreshold = 0.25f;
-	double strafeThreshold = 0.25f;
-	
-	double forwardAcceleration = 0.035f;
-	double rotationAcceleration = 0.03f;
-	
-	double strafeScale = 0.8f;
 	
 	/**
 	 * This function is run when the robot is first started up and should be
@@ -73,20 +57,15 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void robotInit() {
 		
+		gps = new GPS();
+		driveController = new DriveController(gps);
+		
 		gyro = new ADXRS450_Gyro();
 		gyro.calibrate();
-		
-		//Init SpeedControllers
-		frontLeft = new Spark(3);
-		frontRight = new Spark (0);
-		backLeft = new Spark (2);
-		backRight = new Spark (1);
-		
-		//Init mecanum drive train
-		drive = new MecanumDrive (frontLeft, backLeft, frontRight, backRight);
+		accelerometer = new BuiltInAccelerometer();
 		
 		//Init Joystick
-		driveJoystick = new Joystick(0);
+		driveJoystick = new XboxController(0);
 		
 		InitCameras();
 	}
@@ -146,6 +125,7 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousPeriodic() {
+
 	}
 
 	/**
@@ -162,71 +142,21 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void teleopPeriodic() {
 		SmartDashboard.putNumber("Gyro", gyro.getAngle());
-		ManageDriveTrain();
+		SmartDashboard.putNumber("AccelX", accelerometer.getX());
+		SmartDashboard.putNumber("AccelY", accelerometer.getY());
+		SmartDashboard.putNumber("AccelZ", accelerometer.getZ());
 		
+		SmartDashboard.putNumber("Forward", -driveJoystick.getY());
+		SmartDashboard.putNumber("Rotation", -driveJoystick.getX());
+		
+		driveController.DriveRelative(-driveJoystick.getY(), -driveJoystick.getX());
+		DoGPS();
 	}
-
-	void ManageDriveTrain () {
-		double x = driveJoystick.getY();
-		double y = driveJoystick.getX();
-		double z = driveJoystick.getZ();
-		
-		//Check rotation threshold
-		if(z > 0 && z < rotationThreshold) {
-			currentZ = 0;
-		} else if(z < 0 && -z < rotationThreshold) {
-			currentZ = 0;
-		} else {
-			//We are outside of the limits so lets accelerate towards the target
-			//currentZ = z;
-			if(z > currentZ) {
-				//Go positive
-				currentZ = (currentZ + rotationAcceleration);
-			}
-			if(z < currentZ) {
-				currentZ = (currentZ - rotationAcceleration);
-			}
-			//If we are within the amount needed to clip then clip the value
-			if(Math.abs(z - currentZ) < rotationAcceleration) {
-				currentZ = z;
-			}
-		}
-		
-		//Check Strafe threshold
-		if(y > 0 && y < strafeThreshold) {
-			currentY = 0;
-		} else if(y < 0 && -y < strafeThreshold) {
-			currentY = 0;
-		} else {
-			currentY = y * strafeScale;
-		}
-		
-		//Check forward threshold
-		if(x > 0 && x < forwardThreshold) {
-			currentX = 0;
-		} else if(x < 0 && -x < forwardThreshold) {
-			currentX = 0;
-		} else {
-			//We are outside of the limits so lets accelerate towards the target
-			//currentZ = z;
-			if(x > currentX) {
-				//Go positive
-				currentX = (currentX + forwardAcceleration);
-			}
-			if(x < currentX) {
-				currentX = (currentX - forwardAcceleration);
-			}
-			//If we are within the amount needed to clip then clip the value
-			if(Math.abs(x - currentX) < forwardAcceleration) {
-				currentX = x;
-			}
-		}
-		
-		SmartDashboard.putNumber("X", currentX);
-		SmartDashboard.putNumber("Strafe", currentY);
-		SmartDashboard.putNumber("Rotation", currentZ);
-		
-		drive.driveCartesian(-currentY * speedScale, -currentX * speedScale, currentZ * rotScale);
+	
+	void DoGPS () {
+		gps.SubmitAccelerometerData(accelerometer.getX(), accelerometer.getY());
+		gps.SubmitGyroData(gyro.getAngle());
+		gps.Calculate();
 	}
 	
 	/**
@@ -234,7 +164,7 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void testPeriodic() {
-		
+
 	}
 	
 }
