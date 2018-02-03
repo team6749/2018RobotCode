@@ -7,7 +7,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class DriveController {
 	
-	GPS gps;
+	GPS gps; 
 	
 	double speedScale = 1f;
 	double rotScale = 0.8f;

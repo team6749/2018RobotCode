@@ -28,8 +28,8 @@ public class GPS {
 	}
 	
 	public void Calculate () {
-		xG += Math.round(accelOldX * 100) / 100;
-		yG += Math.round(accelOldY * 100) / 100;
+		xG += Math.round(accelOldX * 1000) / 1000;
+		yG += Math.round(accelOldY * 1000) / 1000;
 		
 		x = xG;
 		y = yG;
