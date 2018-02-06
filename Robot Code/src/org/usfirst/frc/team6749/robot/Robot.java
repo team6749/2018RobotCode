@@ -26,6 +26,7 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.GenericHID.Hand;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -149,7 +150,18 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putNumber("Forward", -driveJoystick.getY());
 		SmartDashboard.putNumber("Rotation", -driveJoystick.getX());
 		
-		driveController.DriveRelative(-driveJoystick.getY(), -driveJoystick.getX());
+		
+		double turn = -driveJoystick.getX(Hand.kLeft);
+		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
+		
+		
+		if(driveJoystick.getRawButton(5) == true) {
+			turn = turn * 0.5;
+		}
+		
+		driveController.DriveRelative(speed, turn);
+		
+		
 		DoGPS();
 	}
 	

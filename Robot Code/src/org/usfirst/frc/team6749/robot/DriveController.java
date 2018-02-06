@@ -6,34 +6,39 @@ import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class DriveController {
+
+	DriveCompensation dc;
+	GPS gps;
 	
-	GPS gps; 
+	boolean enableRotationCompensation = true;
 	
 	double speedScale = 1f;
-	double rotScale = 0.8f;
+	double rotScale = 0.55f;
 	
 	double currentForward;
 	double currentY;
 	double currentRot;
 	
-	double forwardThreshold = 0.1f;
-	double rotationThreshold = 0.3f;
+	double forwardThreshold = 0.05f;
+	double rotationThreshold = 0.1f;
 	
-	double forwardAcceleration = 0.05f;
-	double rotationAcceleration = 0.03f;
+	double forwardAcceleration = 0.1f;
+	double rotationAcceleration = 0.04f;
 	
 	SpeedController rightFront;
 	SpeedController rightBack;
 	SpeedController leftFront;
 	SpeedController leftBack;
+	
 
 	DriveController (GPS gps) {
 		this.gps = gps;
+		dc = new DriveCompensation ();
 		//Init SpeedControllers
-		rightFront = new Spark(3);
-		rightBack = new Spark (0);
+		rightFront = new Spark(0);
+		rightBack = new Spark (1);
 		leftFront = new Spark (2);
-		leftBack = new Spark (1);
+		leftBack = new Spark (3);
 	}
 	
 	void DriveRelative (double forwardInput, double rotationInput) {
@@ -45,7 +50,6 @@ public class DriveController {
 			currentRot = 0;
 		} else {
 			//We are outside of the limits so lets accelerate towards the target
-			//currentRot = z;
 			if(rotationInput > currentRot) {
 				//Go positive
 				currentRot = (currentRot + rotationAcceleration);
@@ -80,22 +84,40 @@ public class DriveController {
 			}
 		}
 		
-		StandardDrive(-currentForward * speedScale, currentRot * rotScale);
+		StandardDrive(-currentForward * speedScale, -currentRot * rotScale);
 	}
 	
 	
 	void StandardDrive (double speed, double rotation) {
-		speed = ClampN11(speed);
-		rotation  = ClampN11(rotation);
+		speed = Helpers.ClampN11(speed);
+		rotation  = Helpers.ClampN11(rotation);
 		
-		double rightOutput = speed + rotation;
-		double leftOutput = speed - rotation;
+		double rightOutput = 0;
+		double leftOutput = 0;
 		
-		leftOutput *= .5;
-		rightOutput  *= .5;
+		SmartDashboard.putNumber("speedlol", speed);
+		SmartDashboard.putNumber("rotationlol", rotation);
 		
-		SmartDashboard.putNumber("Left Output", leftOutput);
-		SmartDashboard.putNumber("Right Output", rightOutput);
+		
+		//Process movement if you are not turning to stay straight
+		if(Math.abs(rotation) < rotationThreshold && Math.abs(speed) > forwardThreshold && enableRotationCompensation) {
+			//Start the move
+			
+			SmartDashboard.putBoolean("compensating", true);
+			dc.StartMove(gps.rot);
+			
+			rotation = dc.ProcessRotation(rotation, gps.rot);
+		}
+		
+		if(Math.abs(speed) < forwardThreshold || Math.abs(rotation) > rotationThreshold) {
+			dc.EndMove();
+			SmartDashboard.putBoolean("compensating", false);
+		}
+		
+		
+		
+		rightOutput = rotation - speed;
+		leftOutput = rotation + speed;
 		
 		leftFront.set(leftOutput);
 		leftBack.set(leftOutput);
@@ -103,14 +125,6 @@ public class DriveController {
 		rightBack.set(rightOutput);
 	}
 	
-	double ClampN11 (double d) {
-		if(d < -1) {
-			d = -1;
-		}
-		if(d > 1) {
-			d = 1;
-		}
-		return d;
-	}
+	
 	
 }
