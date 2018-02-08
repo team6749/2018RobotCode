@@ -1,5 +1,6 @@
 package org.usfirst.frc.team6749.robot;
 
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
@@ -10,10 +11,10 @@ public class DriveController {
 	DriveCompensation dc;
 	GPS gps;
 	
-	boolean enableRotationCompensation = true;
+	public boolean enableRotationCompensation = true;
 	
 	double speedScale = 1f;
-	double rotScale = 0.55f;
+	double rotScale = 0.6f;
 	
 	double currentForward;
 	double currentY;
@@ -22,8 +23,8 @@ public class DriveController {
 	double forwardThreshold = 0.05f;
 	double rotationThreshold = 0.1f;
 	
-	double forwardAcceleration = 0.1f;
-	double rotationAcceleration = 0.04f;
+	double forwardAcceleration = 0.08f;
+	double rotationAcceleration = 0.03f;
 	
 	SpeedController rightFront;
 	SpeedController rightBack;
@@ -98,6 +99,8 @@ public class DriveController {
 		SmartDashboard.putNumber("speedlol", speed);
 		SmartDashboard.putNumber("rotationlol", rotation);
 		
+		//Check my prefrences to see if I sould even compensate
+		enableRotationCompensation = Preferences.getInstance().getBoolean("EnableDriveAssist", false);
 		
 		//Process movement if you are not turning to stay straight
 		if(Math.abs(rotation) < rotationThreshold && Math.abs(speed) > forwardThreshold && enableRotationCompensation) {

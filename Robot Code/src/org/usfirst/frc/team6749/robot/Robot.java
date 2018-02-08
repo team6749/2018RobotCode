@@ -23,6 +23,7 @@ import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.XboxController;
@@ -41,9 +42,6 @@ public class Robot extends IterativeRobot {
 	
 	DriveController driveController;
 	
-	//Sensors
-	ADXRS450_Gyro gyro;
-	BuiltInAccelerometer accelerometer;
 	
 	XboxController driveJoystick;
 	
@@ -61,9 +59,7 @@ public class Robot extends IterativeRobot {
 		gps = new GPS();
 		driveController = new DriveController(gps);
 		
-		gyro = new ADXRS450_Gyro();
-		gyro.calibrate();
-		accelerometer = new BuiltInAccelerometer();
+		gps.Init();
 		
 		//Init Joystick
 		driveJoystick = new XboxController(0);
@@ -142,10 +138,10 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
-		SmartDashboard.putNumber("Gyro", gyro.getAngle());
-		SmartDashboard.putNumber("AccelX", accelerometer.getX());
-		SmartDashboard.putNumber("AccelY", accelerometer.getY());
-		SmartDashboard.putNumber("AccelZ", accelerometer.getZ());
+		SmartDashboard.putNumber("Gyro", gps.GetGyro().getAngle());
+		SmartDashboard.putNumber("AccelX", gps.GetAccelerometer().getX());
+		SmartDashboard.putNumber("AccelY", gps.GetAccelerometer().getY());
+		SmartDashboard.putNumber("AccelZ", gps.GetAccelerometer().getZ());
 		
 		SmartDashboard.putNumber("Forward", -driveJoystick.getY());
 		SmartDashboard.putNumber("Rotation", -driveJoystick.getX());
@@ -162,12 +158,6 @@ public class Robot extends IterativeRobot {
 		driveController.DriveRelative(speed, turn);
 		
 		
-		DoGPS();
-	}
-	
-	void DoGPS () {
-		gps.SubmitAccelerometerData(accelerometer.getX(), accelerometer.getY());
-		gps.SubmitGyroData(gyro.getAngle());
 		gps.Calculate();
 	}
 	
