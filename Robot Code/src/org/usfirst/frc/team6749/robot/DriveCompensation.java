@@ -5,10 +5,12 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class DriveCompensation {
 	
-	double intensity = 8;
+	double gyroIntensity = 7;
+	
 	double cancelThreshold = 70;
 	
 	double rotationTarget;
+	
 	boolean inMove = false;
 	
 	public void StartMove (double rotation) {
@@ -32,9 +34,15 @@ public class DriveCompensation {
 			if(Math.abs(rotationTarget - gyroReading) > cancelThreshold) {
 				EndMove();
 			}
-			double compensationAmount = (rotationTarget - gyroReading) / 360 * intensity;
+			
+			double gyroCompensation = (rotationTarget - gyroReading) / 360 * gyroIntensity;
+			
+			double compensationAmount = gyroCompensation;
+			
 			compensationAmount = Helpers.ClampN11(compensationAmount);
-			SmartDashboard.putNumber("C", compensationAmount);
+			
+			SmartDashboard.putNumber("Compensation", compensationAmount);
+			
 			return inputRotation + compensationAmount;
 		}
 	}

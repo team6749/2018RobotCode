@@ -6,21 +6,16 @@ import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class GPS {
-	
-	public enum EncoderLocation {Left, Right};
 
 	ADXRS450_Gyro gyro;
 	BuiltInAccelerometer accelerometer;
 	
-	Encoder leftEncoder;
-	Encoder rightEncoder;
+	FancyEncoder leftEncoder;
+	FancyEncoder rightEncoder;
 	
 	//Global positions
 	double x;
 	double y;
-	
-	double xG;
-	double yG;
 	
 	double rot;
 	
@@ -34,17 +29,14 @@ public class GPS {
 		gyro.calibrate();
 		accelerometer = new BuiltInAccelerometer();
 		
-		leftEncoder = new Encoder (2, 3);
-		rightEncoder = new Encoder (0, 1);
-		leftEncoder.setDistancePerPulse(0.0027777);
-		leftEncoder.setSamplesToAverage(8);
-		rightEncoder.setDistancePerPulse(0.002777);
-		rightEncoder.setSamplesToAverage(8);
-		ResetEncoders ();
+		leftEncoder = new FancyEncoder (2, 3, true);
+		rightEncoder = new FancyEncoder (0, 1, false);
+		
+		ResetSensors();
 	}
 	
 	void GetGyroData () {
-		rot = Math.round((gyro.getAngle() * 10)) / 10f;
+		rot = gyro.getAngle();
 	}
 	
 	void GetAccelerometerData () {
@@ -53,8 +45,16 @@ public class GPS {
 	}
 	
 	void GetEncoderData () {
-		SmartDashboard.putNumber("Left Encoder", leftEncoder.getDistance());
-		SmartDashboard.putNumber("Right Encoder", rightEncoder.getDistance());
+		SmartDashboard.putNumber("Left Encoder", leftEncoder.GetDistanceMetric());
+		SmartDashboard.putNumber("Right Encoder", rightEncoder.GetDistanceMetric());
+		
+		leftEncoder.ProcessLocation(rot);
+		rightEncoder.ProcessLocation(rot);
+		
+		SmartDashboard.putNumber("Left Encoder X", leftEncoder.GetX());
+		SmartDashboard.putNumber("Left Encoder Y", leftEncoder.GetY());
+		SmartDashboard.putNumber("Right Encoder X", rightEncoder.GetX());
+		SmartDashboard.putNumber("Right Encoder Y", rightEncoder.GetY());
 	}
 	
 	public void Calculate () {
@@ -62,11 +62,8 @@ public class GPS {
 		GetGyroData ();
 		GetEncoderData ();
 		
-		xG += accelOldX;
-		yG += accelOldY;
-		
-		x = xG;
-		y = yG;
+		x = (leftEncoder.GetX() + rightEncoder.GetX()) / 2;
+		y = (leftEncoder.GetY() + rightEncoder.GetY()) / 2;
 		
 		SmartDashboard.putNumber("GPS X", x);
 		SmartDashboard.putNumber("GPS Y", y);
@@ -81,19 +78,16 @@ public class GPS {
 		return accelerometer;
 	}
 	
-	public Encoder GetEncoder(EncoderLocation location) {
-		if(location == EncoderLocation.Left) {
-			return leftEncoder;
-		}
-		if(location == EncoderLocation.Right) {
-			return rightEncoder;
-		}
-		return null;
+	void Reset () {
+		//resets and recalibrates the robot
+		ResetSensors ();
 	}
 	
-	void ResetEncoders () {
+	void ResetSensors () {
 		leftEncoder.reset();
 		rightEncoder.reset();
+		gyro.calibrate();
+		gyro.reset();
 	}
 	
 	

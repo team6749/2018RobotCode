@@ -138,14 +138,9 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
-		SmartDashboard.putNumber("Gyro", gps.GetGyro().getAngle());
 		SmartDashboard.putNumber("AccelX", gps.GetAccelerometer().getX());
 		SmartDashboard.putNumber("AccelY", gps.GetAccelerometer().getY());
 		SmartDashboard.putNumber("AccelZ", gps.GetAccelerometer().getZ());
-		
-		SmartDashboard.putNumber("Forward", -driveJoystick.getY());
-		SmartDashboard.putNumber("Rotation", -driveJoystick.getX());
-		
 		
 		double turn = -driveJoystick.getX(Hand.kLeft);
 		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);

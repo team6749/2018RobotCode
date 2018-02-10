@@ -23,7 +23,7 @@ public class DriveController {
 	double forwardThreshold = 0.05f;
 	double rotationThreshold = 0.1f;
 	
-	double forwardAcceleration = 0.08f;
+	double forwardAcceleration = 0.06f;
 	double rotationAcceleration = 0.03f;
 	
 	SpeedController rightFront;
@@ -87,7 +87,6 @@ public class DriveController {
 		
 		StandardDrive(-currentForward * speedScale, -currentRot * rotScale);
 	}
-	
 	
 	void StandardDrive (double speed, double rotation) {
 		speed = Helpers.ClampN11(speed);
