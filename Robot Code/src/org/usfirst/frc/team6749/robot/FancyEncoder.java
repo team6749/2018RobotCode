@@ -35,7 +35,7 @@ public class FancyEncoder {
 		double distance = GetDistanceMetric ();
 		double delta = distance - lastRecordedValue;
 		
-		if(Math.abs(delta) < 0.01 && Math.abs(rotation - lastRotation) < 5) {
+		if(Math.abs(delta) < 0.02 && Math.abs(rotation - lastRotation) < 5) {
 			//Only do one every x meters or rotation is greater than 5*
 			return;
 		}
