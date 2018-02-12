@@ -104,16 +104,15 @@ public class DriveController {
 		//Process movement if you are not turning to stay straight
 		if(Math.abs(rotation) < rotationThreshold && Math.abs(speed) > forwardThreshold && enableRotationCompensation) {
 			//Start the move
+			SmartDashboard.putBoolean("Compensating", true);
+			dc.StartMove(gps.robotPosition);
 			
-			SmartDashboard.putBoolean("compensating", true);
-			dc.StartMove(gps.rot);
-			
-			rotation = dc.ProcessRotation(rotation, gps.rot);
+			rotation = dc.ProcessRotation(rotation, gps.robotPosition);
 		}
 		
 		if(Math.abs(speed) < forwardThreshold || Math.abs(rotation) > rotationThreshold) {
 			dc.EndMove();
-			SmartDashboard.putBoolean("compensating", false);
+			SmartDashboard.putBoolean("Compensating", false);
 		}
 		
 		

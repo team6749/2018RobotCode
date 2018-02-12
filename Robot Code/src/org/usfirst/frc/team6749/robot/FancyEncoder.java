@@ -29,6 +29,7 @@ public class FancyEncoder {
 	
 	void reset () {
 		myEncoder.reset();
+		myPos.Reset();
 	}
 	
 	void ProcessLocation (double rotation) {

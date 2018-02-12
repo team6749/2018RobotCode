@@ -14,29 +14,24 @@ public class GPS {
 	FancyEncoder rightEncoder;
 	
 	//Global positions
-	double x;
-	double y;
-	
-	double rot;
+	RobotPosition robotPosition;
 	
 	double accelInputX;
 	double accelInputY;
 	double accelOldX;
 	double accelOldY;
 	
-	void Init () {
+	public GPS () {
 		gyro = new ADXRS450_Gyro();
-		gyro.calibrate();
 		accelerometer = new BuiltInAccelerometer();
-		
+		robotPosition = new RobotPosition (0, 0, 0);
 		leftEncoder = new FancyEncoder (2, 3, true);
 		rightEncoder = new FancyEncoder (0, 1, false);
-		
-		ResetSensors();
+		Reset(0, 0, 0);
 	}
 	
 	void GetGyroData () {
-		rot = gyro.getAngle();
+		robotPosition.rotation = gyro.getAngle();
 	}
 	
 	void GetAccelerometerData () {
@@ -48,8 +43,8 @@ public class GPS {
 		SmartDashboard.putNumber("Left Encoder", leftEncoder.GetDistanceMetric());
 		SmartDashboard.putNumber("Right Encoder", rightEncoder.GetDistanceMetric());
 		
-		leftEncoder.ProcessLocation(rot);
-		rightEncoder.ProcessLocation(rot);
+		leftEncoder.ProcessLocation(robotPosition.rotation);
+		rightEncoder.ProcessLocation(robotPosition.rotation);
 		
 		SmartDashboard.putNumber("Left Encoder X", leftEncoder.GetX());
 		SmartDashboard.putNumber("Left Encoder Y", leftEncoder.GetY());
@@ -62,12 +57,12 @@ public class GPS {
 		GetGyroData ();
 		GetEncoderData ();
 		
-		x = (leftEncoder.GetX() + rightEncoder.GetX()) / 2;
-		y = (leftEncoder.GetY() + rightEncoder.GetY()) / 2;
+		robotPosition.x = (leftEncoder.GetX() + rightEncoder.GetX()) / 2;
+		robotPosition.y = (leftEncoder.GetY() + rightEncoder.GetY()) / 2;
 		
-		SmartDashboard.putNumber("GPS X", x);
-		SmartDashboard.putNumber("GPS Y", y);
-		SmartDashboard.putNumber("GPS Rot", rot);
+		SmartDashboard.putNumber("GPS X", robotPosition.x);
+		SmartDashboard.putNumber("GPS Y", robotPosition.y);
+		SmartDashboard.putNumber("GPS Rot", robotPosition.rotation);
 	}
 	
 	public ADXRS450_Gyro GetGyro () {
@@ -78,18 +73,35 @@ public class GPS {
 		return accelerometer;
 	}
 	
-	void Reset () {
+	void Reset (double x, double y, double rot) {
 		//resets and recalibrates the robot
-		ResetSensors ();
-	}
-	
-	void ResetSensors () {
 		leftEncoder.reset();
 		rightEncoder.reset();
 		gyro.calibrate();
 		gyro.reset();
+		robotPosition.Reset();
+		robotPosition.x = x;
+		robotPosition.y = y;
+		robotPosition.rotation = rot;
+	}
+}
+
+class RobotPosition {
+	public double x, y, rotation;
+	
+	public RobotPosition (double x, double y, double rotation) {
+		this.x = x;
+		this.y = y;
+		this.rotation = rotation;
 	}
 	
+	public double GetRotationCyclic () {
+		return rotation % 360;
+	}
 	
+	void Reset () {
+		x = 0;
+		y = 0;
+	}
 	
 }

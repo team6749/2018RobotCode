@@ -39,9 +39,8 @@ import edu.wpi.first.wpilibj.GenericHID.Hand;
 public class Robot extends IterativeRobot {
 	
 	GPS gps;
-	
 	DriveController driveController;
-	
+	Auto auto;
 	
 	XboxController driveJoystick;
 	
@@ -49,17 +48,12 @@ public class Robot extends IterativeRobot {
 	int cameraResolutionY = 165;
 	int cameraFPS = 20;
 	
-	/**
-	 * This function is run when the robot is first started up and should be
-	 * used for any initialization code.
-	 */
 	@Override
 	public void robotInit() {
 		
 		gps = new GPS();
 		driveController = new DriveController(gps);
-		
-		gps.Init();
+		auto = new Auto (driveController);
 		
 		//Init Joystick
 		driveJoystick = new XboxController(0);
@@ -114,7 +108,9 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousInit() {
-		
+		//Reset the gps
+		gps.Reset(0, 0, 0);
+		auto.AutoDriveToLocation(new RobotPosition(5, 5, 90));
 	}
 
 	/**
@@ -122,7 +118,7 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousPeriodic() {
-
+		auto.AutoPeriodic(gps.robotPosition);
 	}
 
 	/**

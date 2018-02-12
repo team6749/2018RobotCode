@@ -10,13 +10,15 @@ public class DriveCompensation {
 	double cancelThreshold = 70;
 	
 	double rotationTarget;
+	RobotPosition startPostion;
 	
 	boolean inMove = false;
 	
-	public void StartMove (double rotation) {
+	public void StartMove (RobotPosition robotPos) {
 		
 		if(inMove == false) {
-			rotationTarget = rotation;
+			rotationTarget = robotPos.rotation;
+			startPostion = robotPos;
 		}
 		inMove = true;
 	}
@@ -25,17 +27,16 @@ public class DriveCompensation {
 		inMove = false;
 	}
 	
-	public double ProcessRotation (double inputRotation, double gyroReading) {
-		SmartDashboard.putNumber("rotationTarget", rotationTarget);
+	public double ProcessRotation (double inputRotation, RobotPosition currentRobotPos) {
 		if(!inMove) {
 			return inputRotation;
 		} else {
 			//Check if we are too far out and just cancel
-			if(Math.abs(rotationTarget - gyroReading) > cancelThreshold) {
+			if(Math.abs(rotationTarget - currentRobotPos.rotation) > cancelThreshold) {
 				EndMove();
 			}
 			
-			double gyroCompensation = (rotationTarget - gyroReading) / 360 * gyroIntensity;
+			double gyroCompensation = (rotationTarget - currentRobotPos.rotation) / 360 * gyroIntensity;
 			
 			double compensationAmount = gyroCompensation;
 			
