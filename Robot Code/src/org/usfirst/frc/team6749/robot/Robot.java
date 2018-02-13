@@ -118,6 +118,7 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousPeriodic() {
+		gps.Calculate();
 		auto.AutoPeriodic(gps.robotPosition);
 	}
 

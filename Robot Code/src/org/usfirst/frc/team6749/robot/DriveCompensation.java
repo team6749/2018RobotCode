@@ -5,7 +5,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class DriveCompensation {
 	
-	double gyroIntensity = 7;
+	double gyroIntensity = 5;
 	
 	double cancelThreshold = 70;
 	

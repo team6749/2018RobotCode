@@ -102,6 +102,11 @@ class RobotPosition {
 	void Reset () {
 		x = 0;
 		y = 0;
+		rotation = 0;
+	}
+	
+	public Position ToPosition () {
+		return new Position(x, y);
 	}
 	
 }
