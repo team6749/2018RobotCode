@@ -47,6 +47,4 @@ public class DriveCompensation {
 			return inputRotation + compensationAmount;
 		}
 	}
-	
-	
 }

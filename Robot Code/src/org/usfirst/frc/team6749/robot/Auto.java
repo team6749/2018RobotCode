@@ -134,4 +134,5 @@ public class Auto {
 	void AutoDrive (double speed, double rotation) {
 		dc.StandardDrive(speed * autoMoveSpeed, rotation * autoRotateSpeed);
 	}
+	
 }

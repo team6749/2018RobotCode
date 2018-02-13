@@ -112,7 +112,8 @@ public class Robot extends IterativeRobot {
 		gps.Reset(0, 0, 0);
 		auto.AutoDriveToLocation(new RobotPosition(5, 5, 90));
 	}
-
+	
+	
 	/**
 	 * This function is called periodically during autonomous.
 	 */

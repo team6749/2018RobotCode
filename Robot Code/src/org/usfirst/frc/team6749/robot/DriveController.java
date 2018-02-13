@@ -126,6 +126,4 @@ public class DriveController {
 		rightBack.set(rightOutput);
 	}
 	
-	
-	
 }

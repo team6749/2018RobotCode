@@ -57,7 +57,6 @@ public class FancyEncoder {
 	double GetY () {
 		return myPos.y;
 	}
-	
 }
 
 class EncoderAbsolutePostion {

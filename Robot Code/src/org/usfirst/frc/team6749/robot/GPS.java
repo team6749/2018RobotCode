@@ -108,5 +108,4 @@ class RobotPosition {
 	public Position ToPosition () {
 		return new Position(x, y);
 	}
-	
 }

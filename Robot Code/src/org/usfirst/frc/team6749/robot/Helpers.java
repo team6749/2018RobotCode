@@ -73,7 +73,6 @@ public class Helpers {
 		}
 		return 1;
 	}
-	
 }
 
 class Position {
