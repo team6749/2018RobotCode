@@ -32,7 +32,7 @@ public class FancyEncoder {
 		myPos.Reset();
 	}
 	
-	void ProcessLocation (double rotation) {
+	public void ProcessLocation (double rotation) {
 		double distance = GetDistanceMetric ();
 		double delta = distance - lastRecordedValue;
 		
@@ -44,8 +44,8 @@ public class FancyEncoder {
 		double x = Math.cos(Math.toRadians(rotation)) * delta;
 		double y = Math.sin(Math.toRadians(rotation)) * delta;
 		
-		myPos.x += x;
-		myPos.y += y;
+		myPos.AddPosition(x, y);
+		myPos.AddDistance(delta);
 		
 		lastRecordedValue = distance;
 		lastRotation = rotation;
@@ -60,16 +60,27 @@ public class FancyEncoder {
 }
 
 class EncoderAbsolutePostion {
-	public double x, y;
+	public double x, y, distanceTraveled;
 	
 	public EncoderAbsolutePostion (double x, double y) {
 		this.x = x;
 		this.y = y;
+		this.distanceTraveled = 0;
+	}
+	
+	public void AddPosition (double x, double y) {
+		this.x += x;
+		this.y += y;
+	}
+	
+	public void AddDistance (double distance) {
+		this.distanceTraveled += distance;
 	}
 	
 	void Reset () {
 		x = 0;
 		y = 0;
+		distanceTraveled = 0;
 	}
 	
 }

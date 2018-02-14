@@ -21,12 +21,14 @@ import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
 
 /**
@@ -40,7 +42,6 @@ public class Robot extends IterativeRobot {
 	
 	GPS gps;
 	DriveController driveController;
-	Auto auto;
 	
 	XboxController driveJoystick;
 	
@@ -48,15 +49,29 @@ public class Robot extends IterativeRobot {
 	int cameraResolutionY = 165;
 	int cameraFPS = 20;
 	
+	SendableChooser<Integer> autoSelection;
+	SendableChooser<Integer> myTeam;
+	
 	@Override
 	public void robotInit() {
 		
 		gps = new GPS();
 		driveController = new DriveController(gps);
-		auto = new Auto (driveController);
 		
 		//Init Joystick
 		driveJoystick = new XboxController(0);
+		
+		autoSelection = new SendableChooser();
+		autoSelection.addDefault("0, 0, 0", 0);
+		autoSelection.addObject("Left", 1);
+		autoSelection.addObject("Middle", 2);
+		autoSelection.addObject("Right", 3);
+		SmartDashboard.putData("Auto Selection", autoSelection);
+		
+		myTeam = new SendableChooser();
+		myTeam.addDefault("Red", 0);
+		myTeam.addDefault("Blue", 1);
+		SmartDashboard.putData("Team Selection", myTeam);
 		
 		InitCameras();
 	}
@@ -109,8 +124,30 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void autonomousInit() {
 		//Reset the gps
-		gps.Reset(0, 0, 0);
-		auto.AutoDriveToLocation(new RobotPosition(5, 5, 90));
+		int team = (int) myTeam.getSelected();
+		int autoMode = (int) autoSelection.getSelected();
+		
+		switch (autoMode) {
+		case 1:
+			//We are on the left
+			//Gps location to reset to. 1.676m
+			gps.Reset(1.676, RobotData.height, 0);
+			break;
+		case 2:
+			//We are centered
+			//4.7752m
+			gps.Reset(4.7752, RobotData.height, 0);
+			break;
+		case 3:
+			//We are on the right
+			//6.5786m
+			gps.Reset(6.5786, RobotData.height, 0);
+			break;
+		case 0:
+			//We have no location selected so just reset to 0, 0, 0
+			gps.Reset(0, 0, 0);
+			break;
+		}
 	}
 	
 	
@@ -120,7 +157,6 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void autonomousPeriodic() {
 		gps.Calculate();
-		auto.AutoPeriodic(gps.robotPosition);
 	}
 
 	/**
@@ -138,18 +174,15 @@ public class Robot extends IterativeRobot {
 	public void teleopPeriodic() {
 		SmartDashboard.putNumber("AccelX", gps.GetAccelerometer().getX());
 		SmartDashboard.putNumber("AccelY", gps.GetAccelerometer().getY());
-		SmartDashboard.putNumber("AccelZ", gps.GetAccelerometer().getZ());
 		
 		double turn = -driveJoystick.getX(Hand.kLeft);
 		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
-		
 		
 		if(driveJoystick.getRawButton(5) == true) {
 			turn = turn * 0.5;
 		}
 		
 		driveController.DriveRelative(speed, turn);
-		
 		
 		gps.Calculate();
 	}

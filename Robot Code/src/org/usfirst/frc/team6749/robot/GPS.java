@@ -27,6 +27,7 @@ public class GPS {
 		robotPosition = new RobotPosition (0, 0, 0);
 		leftEncoder = new FancyEncoder (2, 3, true);
 		rightEncoder = new FancyEncoder (0, 1, false);
+		gyro.calibrate();
 		Reset(0, 0, 0);
 	}
 	
@@ -37,6 +38,9 @@ public class GPS {
 	void GetAccelerometerData () {
 		accelOldX = (accelerometer.getX()*0.2) + (0.8*accelOldX);
 		accelOldY = (accelerometer.getY()*0.2) + (0.8*accelOldY);
+		
+		SmartDashboard.putNumber("Accelerometer X", accelOldX);
+		SmartDashboard.putNumber("Accelerometer Y", accelOldY);
 	}
 	
 	void GetEncoderData () {
@@ -58,11 +62,13 @@ public class GPS {
 		GetEncoderData ();
 		
 		robotPosition.x = (leftEncoder.GetX() + rightEncoder.GetX()) / 2;
-		robotPosition.y = (leftEncoder.GetY() + rightEncoder.GetY()) / 2;
+		robotPosition.y = (leftEncoder.GetY() + rightEncoder.GetY()) / 2; 
+		robotPosition.distance = (leftEncoder.GetDistanceMetric() + rightEncoder.GetDistanceMetric()) / 2;
 		
 		SmartDashboard.putNumber("GPS X", robotPosition.x);
 		SmartDashboard.putNumber("GPS Y", robotPosition.y);
 		SmartDashboard.putNumber("GPS Rot", robotPosition.rotation);
+		SmartDashboard.putNumber("GPS Dist", robotPosition.distance);
 	}
 	
 	public ADXRS450_Gyro GetGyro () {
@@ -73,11 +79,15 @@ public class GPS {
 		return accelerometer;
 	}
 	
+	public double GetAccelMagnatude () {
+		double avg = (accelOldX + accelOldY) / 2d;
+		return Math.abs(avg);
+	}
+	
 	void Reset (double x, double y, double rot) {
 		//resets and recalibrates the robot
 		leftEncoder.reset();
 		rightEncoder.reset();
-		gyro.calibrate();
 		gyro.reset();
 		robotPosition.Reset();
 		robotPosition.x = x;
@@ -88,11 +98,19 @@ public class GPS {
 
 class RobotPosition {
 	public double x, y, rotation;
+	public double distance;
 	
 	public RobotPosition (double x, double y, double rotation) {
 		this.x = x;
 		this.y = y;
 		this.rotation = rotation;
+		this.distance = 0;
+	}
+	
+	public void AddPosition (double x, double y, double rotation) {
+		this.x += x;
+		this.y += y;
+		this.rotation += rotation;
 	}
 	
 	public double GetRotationCyclic () {
@@ -103,6 +121,7 @@ class RobotPosition {
 		x = 0;
 		y = 0;
 		rotation = 0;
+		distance = 0;
 	}
 	
 	public Position ToPosition () {
