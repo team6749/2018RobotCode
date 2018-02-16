@@ -10,7 +10,6 @@ public class FancyEncoder {
 	public double encoderStepsPerRotation = 0.002777777777777;
 	
 	Encoder myEncoder;
-	
 	EncoderAbsolutePostion myPos;
 	
 	double lastRecordedValue;
@@ -27,12 +26,16 @@ public class FancyEncoder {
 		return myEncoder.getDistance() * encoderCalibrationValue / 100 * encoderCalibrationMultiplier;
 	}
 	
+	double GetDistanceMetricAbsolute () {
+		return myPos.distanceTraveledAbsolute;
+	}
+	
 	void reset () {
 		myEncoder.reset();
 		myPos.Reset();
 	}
 	
-	public void ProcessLocation (double rotation) {
+	public void ProcessLocation (double rotation, GPS gps) {
 		double distance = GetDistanceMetric ();
 		double delta = distance - lastRecordedValue;
 		
@@ -51,6 +54,10 @@ public class FancyEncoder {
 		lastRotation = rotation;
 	}
 	
+	public double GetDistanceAbsolute () {
+		return myPos.distanceTraveledAbsolute;
+	}
+	
 	double GetX () {
 		return myPos.x;
 	}
@@ -60,12 +67,13 @@ public class FancyEncoder {
 }
 
 class EncoderAbsolutePostion {
-	public double x, y, distanceTraveled;
+	public double x, y, distanceTraveled, distanceTraveledAbsolute;
 	
 	public EncoderAbsolutePostion (double x, double y) {
 		this.x = x;
 		this.y = y;
 		this.distanceTraveled = 0;
+		this.distanceTraveledAbsolute = 0;
 	}
 	
 	public void AddPosition (double x, double y) {
@@ -75,12 +83,15 @@ class EncoderAbsolutePostion {
 	
 	public void AddDistance (double distance) {
 		this.distanceTraveled += distance;
+		this.distanceTraveledAbsolute += Math.abs(distance);
 	}
+	
 	
 	void Reset () {
 		x = 0;
 		y = 0;
 		distanceTraveled = 0;
+		distanceTraveledAbsolute = 0;
 	}
 	
 }

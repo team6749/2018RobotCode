@@ -42,7 +42,7 @@ public class Robot extends IterativeRobot {
 	
 	GPS gps;
 	DriveController driveController;
-	
+	Auto auto;
 	XboxController driveJoystick;
 	
 	int cameraResolutionX = 225;
@@ -57,6 +57,7 @@ public class Robot extends IterativeRobot {
 		
 		gps = new GPS();
 		driveController = new DriveController(gps);
+		auto = new Auto(driveController, gps);
 		
 		//Init Joystick
 		driveJoystick = new XboxController(0);
@@ -146,6 +147,28 @@ public class Robot extends IterativeRobot {
 		case 0:
 			//We have no location selected so just reset to 0, 0, 0
 			gps.Reset(0, 0, 0);
+			
+			AutoCommand cmd = new AutoCommand(AutoCommand.CommandType.Move, gps);
+			cmd.InitMove(2, 1);
+			auto.AddCommand(cmd);
+			
+			AutoCommand cmd1 = new AutoCommand(AutoCommand.CommandType.Move, gps);
+			cmd1.InitMove(-4, 1);
+			auto.AddCommand(cmd1);
+			
+			AutoCommand cmd2 = new AutoCommand(AutoCommand.CommandType.Move, gps);
+			cmd2.InitMove(2, 1);
+			auto.AddCommand(cmd2);
+			
+			AutoCommand cmd3 = new AutoCommand(AutoCommand.CommandType.Move, gps);
+			cmd3.InitMove(-4, 1);
+			auto.AddCommand(cmd3);
+			
+			AutoCommand cmd4 = new AutoCommand(AutoCommand.CommandType.Move, gps);
+			cmd4.InitMove(4, 1);
+			auto.AddCommand(cmd4);
+			
+			
 			break;
 		}
 	}
@@ -156,6 +179,7 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousPeriodic() {
+		auto.AutoPeriodic(gps.robotPosition);
 		gps.Calculate();
 	}
 
@@ -172,9 +196,6 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
-		SmartDashboard.putNumber("AccelX", gps.GetAccelerometer().getX());
-		SmartDashboard.putNumber("AccelY", gps.GetAccelerometer().getY());
-		
 		double turn = -driveJoystick.getX(Hand.kLeft);
 		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
 		

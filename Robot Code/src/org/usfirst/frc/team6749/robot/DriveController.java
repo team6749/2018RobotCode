@@ -126,4 +126,8 @@ public class DriveController {
 		rightBack.set(rightOutput);
 	}
 	
+	public void Stop () {
+		StandardDrive (0, 0);
+	}
+	
 }

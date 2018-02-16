@@ -44,16 +44,16 @@ public class GPS {
 	}
 	
 	void GetEncoderData () {
-		SmartDashboard.putNumber("Left Encoder", leftEncoder.GetDistanceMetric());
-		SmartDashboard.putNumber("Right Encoder", rightEncoder.GetDistanceMetric());
+		//SmartDashboard.putNumber("Left Encoder", leftEncoder.GetDistanceMetric());
+		//SmartDashboard.putNumber("Right Encoder", rightEncoder.GetDistanceMetric());
 		
-		leftEncoder.ProcessLocation(robotPosition.rotation);
-		rightEncoder.ProcessLocation(robotPosition.rotation);
+		leftEncoder.ProcessLocation(robotPosition.rotation, this);
+		rightEncoder.ProcessLocation(robotPosition.rotation, this);
 		
-		SmartDashboard.putNumber("Left Encoder X", leftEncoder.GetX());
-		SmartDashboard.putNumber("Left Encoder Y", leftEncoder.GetY());
-		SmartDashboard.putNumber("Right Encoder X", rightEncoder.GetX());
-		SmartDashboard.putNumber("Right Encoder Y", rightEncoder.GetY());
+		//SmartDashboard.putNumber("Left Encoder X", leftEncoder.GetX());
+		//SmartDashboard.putNumber("Left Encoder Y", leftEncoder.GetY());
+		//SmartDashboard.putNumber("Right Encoder X", rightEncoder.GetX());
+		//SmartDashboard.putNumber("Right Encoder Y", rightEncoder.GetY());
 	}
 	
 	public void Calculate () {
@@ -64,6 +64,7 @@ public class GPS {
 		robotPosition.x = (leftEncoder.GetX() + rightEncoder.GetX()) / 2;
 		robotPosition.y = (leftEncoder.GetY() + rightEncoder.GetY()) / 2; 
 		robotPosition.distance = (leftEncoder.GetDistanceMetric() + rightEncoder.GetDistanceMetric()) / 2;
+		robotPosition.distanceAbsolute = (leftEncoder.GetDistanceMetricAbsolute() + rightEncoder.GetDistanceMetricAbsolute()) / 2;
 		
 		SmartDashboard.putNumber("GPS X", robotPosition.x);
 		SmartDashboard.putNumber("GPS Y", robotPosition.y);
@@ -98,13 +99,14 @@ public class GPS {
 
 class RobotPosition {
 	public double x, y, rotation;
-	public double distance;
+	public double distance, distanceAbsolute;
 	
 	public RobotPosition (double x, double y, double rotation) {
 		this.x = x;
 		this.y = y;
 		this.rotation = rotation;
 		this.distance = 0;
+		this.distanceAbsolute = 0;
 	}
 	
 	public void AddPosition (double x, double y, double rotation) {
@@ -122,6 +124,7 @@ class RobotPosition {
 		y = 0;
 		rotation = 0;
 		distance = 0;
+		distanceAbsolute = 0;
 	}
 	
 	public Position ToPosition () {
