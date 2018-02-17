@@ -21,6 +21,7 @@ public class GPS {
 	double accelOldX;
 	double accelOldY;
 	
+	
 	public GPS () {
 		gyro = new ADXRS450_Gyro();
 		accelerometer = new BuiltInAccelerometer();

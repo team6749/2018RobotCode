@@ -22,7 +22,7 @@ public class DriveController {
 	
 	double forwardThreshold = 0.05f;
 	double rotationThreshold = 0.1f;
-	
+		
 	double forwardAcceleration = 0.06f;
 	double rotationAcceleration = 0.03f;
 	
@@ -47,7 +47,7 @@ public class DriveController {
 		//Check rotation threshold
 		if(rotationInput > 0 && rotationInput < rotationThreshold) {
 			currentRot = 0;
-		} else if(rotationInput < 0 && -rotationInput < rotationThreshold) {
+		} else if(rotationInput < 0 && -rotationInput < -rotationThreshold) {
 			currentRot = 0;
 		} else {
 			//We are outside of the limits so lets accelerate towards the target
@@ -67,7 +67,7 @@ public class DriveController {
 		//Check forward threshold
 		if(forwardInput > 0 && forwardInput < forwardThreshold) {
 			currentForward = 0;
-		} else if(forwardInput < 0 && -forwardInput < forwardThreshold) {
+		} else if(forwardInput < 0 && -forwardInput < -forwardThreshold) {
 			currentForward = 0;
 		} else {
 			//We are outside of the limits so lets accelerate towards the target

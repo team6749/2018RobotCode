@@ -32,5 +32,5 @@ public class AutoCommand {
 	//If it is a rotate command we want to get to rotation x
 	double rotate_amount;
 	double rotate_speed;
-	double start_rotation;
+	double start_rotation = -1;
 }

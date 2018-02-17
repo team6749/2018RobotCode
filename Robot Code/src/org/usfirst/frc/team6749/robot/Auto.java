@@ -59,9 +59,6 @@ public class Auto {
 	}
 	
 	void MoveCommandPeriodic (AutoCommand command) {
-		SmartDashboard.putNumber("Abs dist", gps.robotPosition.distanceAbsolute);
-		SmartDashboard.putNumber("Result", (Math.abs(command.move_distance) + command.start_distance) - gps.robotPosition.distanceAbsolute);
-		
 		//If we just started do x
 		if(command.start_distance == -1) {
 			command.start_distance = gps.robotPosition.distanceAbsolute;
@@ -73,7 +70,7 @@ public class Auto {
 			if (command.move_distance > 0) {
 				AutoDrive(command.move_speed * maxAutoSpeed, 0);
 			}
-			if (command.move_distance < 0){
+			if (command.move_distance <= 0){
 				AutoDrive(-command.move_speed * maxAutoSpeed, 0);
 			}
 		} else {
@@ -83,18 +80,25 @@ public class Auto {
 	}
 	
 	public void RotateCommandPeriodic (AutoCommand command) {
-		if(true) {
-			if(command.rotate_amount > 0) {
-				//We need to rotate left?
-				AutoDrive(0, command.rotate_speed);
+		
+		if(command.start_rotation == -1) {
+			command.start_rotation = gps.robotPosition.rotation;
+		}
+		
+		SmartDashboard.putNumber("Result", Math.abs(command.start_rotation + command.rotate_amount) - Math.abs(gps.robotPosition.rotation));
+		if(command.rotate_amount > 0) {
+			if(Math.abs(command.start_rotation + command.rotate_amount) - Math.abs(gps.robotPosition.rotation) > 0) {
+				AutoDrive (0, -command.rotate_speed * maxRotateSpeed);
+			} else {
+				CompletedCommand();
 			}
-			if(command.rotate_amount < 0) {
-				//We need to rotate right?
-				AutoDrive(0, command.rotate_speed);
+		}
+		if(command.rotate_amount < 0) {
+			if(Math.abs(gps.robotPosition.rotation) - Math.abs(command.start_rotation + Math.abs(command.rotate_amount)) > 0) {
+				AutoDrive (0, command.rotate_speed * maxRotateSpeed);
+			} else {
+				CompletedCommand();
 			}
-		} else {
-			//We have roatated it!
-			CompletedCommand();
 		}
 	}
 	

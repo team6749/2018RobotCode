@@ -43,6 +43,10 @@ public class Robot extends IterativeRobot {
 	GPS gps;
 	DriveController driveController;
 	Auto auto;
+	
+	AutoRecord autoRecord;
+	AutoReplay autoReplay;
+	
 	XboxController driveJoystick;
 	
 	int cameraResolutionX = 225;
@@ -58,18 +62,28 @@ public class Robot extends IterativeRobot {
 		gps = new GPS();
 		driveController = new DriveController(gps);
 		auto = new Auto(driveController, gps);
+		autoRecord = new AutoRecord();
+		autoReplay = new AutoReplay();
+		
 		
 		//Init Joystick
 		driveJoystick = new XboxController(0);
 		
-		autoSelection = new SendableChooser();
+		autoSelection = new SendableChooser<Integer>();
 		autoSelection.addDefault("0, 0, 0", 0);
-		autoSelection.addObject("Left", 1);
-		autoSelection.addObject("Middle", 2);
-		autoSelection.addObject("Right", 3);
+		
+		autoSelection.addObject("Replay Test", 1);
+		autoSelection.addObject("Replay Left", 2);
+		autoSelection.addObject("Replay Middle", 3);
+		autoSelection.addObject("Replay Right", 4);
+		
+		autoSelection.addObject("Record Test", 5);
+		autoSelection.addObject("Record Left", 6);
+		autoSelection.addObject("Record Middle", 7);
+		autoSelection.addObject("Record Right", 8);
 		SmartDashboard.putData("Auto Selection", autoSelection);
 		
-		myTeam = new SendableChooser();
+		myTeam = new SendableChooser<Integer>();
 		myTeam.addDefault("Red", 0);
 		myTeam.addDefault("Blue", 1);
 		SmartDashboard.putData("Team Selection", myTeam);
@@ -128,48 +142,34 @@ public class Robot extends IterativeRobot {
 		int team = (int) myTeam.getSelected();
 		int autoMode = (int) autoSelection.getSelected();
 		
-		switch (autoMode) {
-		case 1:
-			//We are on the left
-			//Gps location to reset to. 1.676m
-			gps.Reset(1.676, RobotData.height, 0);
-			break;
-		case 2:
-			//We are centered
-			//4.7752m
-			gps.Reset(4.7752, RobotData.height, 0);
-			break;
-		case 3:
-			//We are on the right
-			//6.5786m
-			gps.Reset(6.5786, RobotData.height, 0);
-			break;
-		case 0:
-			//We have no location selected so just reset to 0, 0, 0
+		if(autoMode == 0) {
+			gps.Reset(0, 0, 0);
+			//Test Test mode
+		}
+		
+		if(autoMode == 1 || autoMode == 5) {
+			//Test Mode
 			gps.Reset(0, 0, 0);
 			
-			AutoCommand cmd = new AutoCommand(AutoCommand.CommandType.Move, gps);
-			cmd.InitMove(2, 1);
-			auto.AddCommand(cmd);
-			
-			AutoCommand cmd1 = new AutoCommand(AutoCommand.CommandType.Move, gps);
-			cmd1.InitMove(-4, 1);
-			auto.AddCommand(cmd1);
-			
-			AutoCommand cmd2 = new AutoCommand(AutoCommand.CommandType.Move, gps);
-			cmd2.InitMove(2, 1);
-			auto.AddCommand(cmd2);
-			
-			AutoCommand cmd3 = new AutoCommand(AutoCommand.CommandType.Move, gps);
-			cmd3.InitMove(-4, 1);
-			auto.AddCommand(cmd3);
-			
-			AutoCommand cmd4 = new AutoCommand(AutoCommand.CommandType.Move, gps);
-			cmd4.InitMove(4, 1);
-			auto.AddCommand(cmd4);
-			
-			
-			break;
+			if(autoMode == 1) {
+				//We are going to Replay
+				autoReplay.StartReplay(Preferences.getInstance().getString("ReplayTest", ""), driveController);
+			}
+			if(autoMode == 5) {
+				autoRecord.StartRecording("ReplayTest");
+			}
+		}
+		if(autoMode == 2 || autoMode == 6) {
+			//Left
+			gps.Reset(1.676, RobotData.height, 0);
+		}
+		if(autoMode == 3 || autoMode == 7) {
+			//Middle
+			gps.Reset(4.7752, RobotData.height, 0);
+		}
+		if(autoMode == 4 || autoMode == 8) {
+			gps.Reset(6.5786, RobotData.height, 0);
+			//Right
 		}
 	}
 	
@@ -179,7 +179,29 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousPeriodic() {
-		auto.AutoPeriodic(gps.robotPosition);
+		
+		DoMovement();
+		
+		if(autoRecord.recording) {
+			//This code is copied from lower in this script
+			
+			//Call this so the robot acts like it should in teleop in auto for recording
+			
+			double turn = -driveJoystick.getX(Hand.kLeft);
+			double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
+			
+			autoRecord.RecordingPeriodic(speed, turn);
+			
+			if(driveJoystick.getRawButton(2) == true) {
+				autoRecord.StopAndStoreRecording();
+				SmartDashboard.putBoolean("RecordingEnded", true);
+			}
+		}
+		if(autoReplay.isReplaying) {
+			autoReplay.ReplayPeriodic();
+		}
+		
+		
 		gps.Calculate();
 	}
 
@@ -196,6 +218,12 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
+		DoMovement();
+		
+		gps.Calculate();
+	}
+	
+	void DoMovement () {
 		double turn = -driveJoystick.getX(Hand.kLeft);
 		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
 		
@@ -204,8 +232,6 @@ public class Robot extends IterativeRobot {
 		}
 		
 		driveController.DriveRelative(speed, turn);
-		
-		gps.Calculate();
 	}
 	
 	/**
