@@ -53,6 +53,7 @@ public class Robot extends IterativeRobot {
 	int cameraResolutionY = 165;
 	int cameraFPS = 20;
 	
+	SendableChooser<Integer> recordingOptions;
 	SendableChooser<Integer> autoSelection;
 	SendableChooser<Integer> myTeam;
 	
@@ -77,11 +78,15 @@ public class Robot extends IterativeRobot {
 		autoSelection.addObject("Replay Middle", 3);
 		autoSelection.addObject("Replay Right", 4);
 		
-		autoSelection.addObject("Record Test", 5);
-		autoSelection.addObject("Record Left", 6);
-		autoSelection.addObject("Record Middle", 7);
-		autoSelection.addObject("Record Right", 8);
 		SmartDashboard.putData("Auto Selection", autoSelection);
+		
+
+		recordingOptions = new SendableChooser<Integer>();
+		recordingOptions.addDefault("Record Test", 0);
+		recordingOptions.addObject("Record Left", 1);
+		recordingOptions.addObject("Record Middle", 2);
+		recordingOptions.addObject("Record Right", 3);
+		SmartDashboard.putData("Recording Selection", recordingOptions);
 		
 		myTeam = new SendableChooser<Integer>();
 		myTeam.addDefault("Red", 0);
@@ -146,29 +151,25 @@ public class Robot extends IterativeRobot {
 			gps.Reset(0, 0, 0);
 			//Test Test mode
 		}
-		
-		if(autoMode == 1 || autoMode == 5) {
+		if(autoMode == 1) {
 			//Test Mode
 			gps.Reset(0, 0, 0);
-			
-			if(autoMode == 1) {
-				//We are going to Replay
-				autoReplay.StartReplay(Preferences.getInstance().getString("ReplayTest", ""), driveController);
-			}
-			if(autoMode == 5) {
-				autoRecord.StartRecording("ReplayTest");
-			}
+			//We are going to Replay
+			autoReplay.StartReplay(Preferences.getInstance().getString("test_recording", ""));
 		}
-		if(autoMode == 2 || autoMode == 6) {
+		if(autoMode == 2) {
 			//Left
 			gps.Reset(1.676, RobotData.height, 0);
+			autoReplay.StartReplay(Preferences.getInstance().getString("left_recording", ""));
 		}
-		if(autoMode == 3 || autoMode == 7) {
+		if(autoMode == 3) {
 			//Middle
 			gps.Reset(4.7752, RobotData.height, 0);
+			autoReplay.StartReplay(Preferences.getInstance().getString("middle_recording", ""));
 		}
-		if(autoMode == 4 || autoMode == 8) {
+		if(autoMode == 4) {
 			gps.Reset(6.5786, RobotData.height, 0);
+			autoReplay.StartReplay(Preferences.getInstance().getString("right_recording", ""));
 			//Right
 		}
 	}
@@ -179,26 +180,10 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousPeriodic() {
-		
-		DoMovement();
-		
-		if(autoRecord.recording) {
-			//This code is copied from lower in this script
-			
-			//Call this so the robot acts like it should in teleop in auto for recording
-			
-			double turn = -driveJoystick.getX(Hand.kLeft);
-			double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
-			
-			autoRecord.RecordingPeriodic(speed, turn);
-			
-			if(driveJoystick.getRawButton(2) == true) {
-				autoRecord.StopAndStoreRecording();
-				SmartDashboard.putBoolean("RecordingEnded", true);
-			}
-		}
 		if(autoReplay.isReplaying) {
-			autoReplay.ReplayPeriodic();
+			if(autoReplay.ReplayPeriodic() != null) {
+				DoMovement(autoReplay.ReplayPeriodic());
+			}
 		}
 		
 		
@@ -218,12 +203,14 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
-		DoMovement();
+		DoMovement(GetUserInput ());
 		
 		gps.Calculate();
 	}
 	
-	void DoMovement () {
+	double[] GetUserInput () {
+		double[] out = new double[2];
+		
 		double turn = -driveJoystick.getX(Hand.kLeft);
 		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
 		
@@ -231,7 +218,14 @@ public class Robot extends IterativeRobot {
 			turn = turn * 0.5;
 		}
 		
-		driveController.DriveRelative(speed, turn);
+		out[0] = speed;
+		out[1] = turn;
+		
+		return out;
+	}
+	
+	void DoMovement (double[] inputs) {
+		driveController.DriveRelative(inputs[0], inputs[1]);
 	}
 	
 	/**
@@ -239,7 +233,36 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void testPeriodic() {
-
+		DoMovement(GetUserInput ());
+		
+		if(autoRecord.recording) {
+			autoRecord.RecordingPeriodic(GetUserInput ());
+			
+			if(driveJoystick.getRawButton(2) == true) {
+				autoRecord.StopAndStoreRecording();
+				SmartDashboard.putBoolean("RecordingEnded", true);
+			}
+		}
+	}
+	
+	@Override
+	public void testInit() {
+		int recordMode = (int) recordingOptions.getSelected();
+		
+		switch (recordMode) {
+		case 0:
+			autoRecord.StartRecording("test_recording");
+			break;
+		case 1:
+			autoRecord.StartRecording("left_recording");
+			break;
+		case 2:
+			autoRecord.StartRecording("middle_recording");
+			break;
+		case 3:
+			autoRecord.StartRecording("right_recording");
+			break;
+		}
 	}
 	
 }
