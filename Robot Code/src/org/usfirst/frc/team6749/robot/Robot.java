@@ -19,12 +19,14 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.CameraServer;
+import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Preferences;
+import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.XboxController;
@@ -49,13 +51,19 @@ public class Robot extends IterativeRobot {
 	
 	XboxController driveJoystick;
 	
-	int cameraResolutionX = 225;
-	int cameraResolutionY = 165;
-	int cameraFPS = 20;
+	int cameraResolutionX = 360;
+	int cameraResolutionY = 240;
+	int cameraFPS = 30;
 	
 	SendableChooser<Integer> recordingOptions;
 	SendableChooser<Integer> autoSelection;
 	SendableChooser<Integer> myTeam;
+	
+	Spark ratchet;
+	Solenoid elevatorArms;
+	Compressor compressor;
+	
+	boolean elevatorArmState;
 	
 	@Override
 	public void robotInit() {
@@ -93,11 +101,26 @@ public class Robot extends IterativeRobot {
 		myTeam.addDefault("Blue", 1);
 		SmartDashboard.putData("Team Selection", myTeam);
 		
+		ratchet = new Spark(4);
+		elevatorArms = new Solenoid(1);
+		compressor = new Compressor(0);
+		
+		//Enable the compressor
+		compressor.setClosedLoopControl(true);
+		
 		InitCameras();
 	}
 	
 	void InitCameras () {
 		
+		new Thread(() -> {
+			UsbCamera front = CameraServer.getInstance().startAutomaticCapture(0);
+			front.setFPS(cameraFPS);
+			front.setBrightness(50);
+			front.setResolution(cameraResolutionX, cameraResolutionY);
+		}).start();
+		
+		/*
 		new Thread(() -> {
             UsbCamera leftCamera = CameraServer.getInstance().startAutomaticCapture(0);
             UsbCamera rightCamera = CameraServer.getInstance().startAutomaticCapture(1);
@@ -136,6 +159,7 @@ public class Robot extends IterativeRobot {
             System.out.println("Interrupted.");
             
         }).start(); 
+        */
 	}
 
 	/**
@@ -209,23 +233,58 @@ public class Robot extends IterativeRobot {
 	}
 	
 	double[] GetUserInput () {
-		double[] out = new double[2];
+		double[] out = new double[4];
 		
 		double turn = -driveJoystick.getX(Hand.kLeft);
 		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
+		
+		if(Math.abs(turn) < 0.07) {
+			//We have not rotated a lot so dont set the rotation
+			turn = 0;
+		}
+		
+		double pov = driveJoystick.getPOV(0);
+		double ratchetOut = 0;
+		
+		if(pov == 0) {
+			ratchetOut = 1;
+		}
+		if(pov == 180) {
+			ratchetOut = -1;
+		}
 		
 		if(driveJoystick.getRawButton(5) == true) {
 			turn = turn * 0.5;
 		}
 		
+		//Control raising and lowering the arm
+		if(driveJoystick.getRawButtonPressed(6) == true) {
+			elevatorArmState = !elevatorArmState;
+		}
+		int eleArmStateDouble = (elevatorArmState) ? 1 : 0;
+		
+		
 		out[0] = speed;
 		out[1] = turn;
+		out[2] = ratchetOut;
+		out[3] = eleArmStateDouble;
 		
 		return out;
 	}
 	
 	void DoMovement (double[] inputs) {
 		driveController.DriveRelative(inputs[0], inputs[1]);
+		
+		ratchet.set(inputs[2]);
+		
+		boolean elevatorState = false;
+		if(inputs[3] == 1) {
+			elevatorState = true;
+		} else {
+			elevatorState = false;
+		}
+		
+		elevatorArms.set(elevatorState);
 	}
 	
 	/**
