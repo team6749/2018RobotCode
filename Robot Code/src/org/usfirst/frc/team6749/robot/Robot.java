@@ -29,6 +29,7 @@ import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
+import edu.wpi.first.wpilibj.Talon;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
@@ -50,10 +51,11 @@ public class Robot extends IterativeRobot {
 	AutoReplay autoReplay;
 	
 	XboxController driveJoystick;
+	Joystick controllerJoystick;
 	
-	int cameraResolutionX = 360;
-	int cameraResolutionY = 240;
-	int cameraFPS = 30;
+	int cameraResolutionX = 240;
+	int cameraResolutionY = 135;
+	int cameraFPS = 20;
 	
 	SendableChooser<Integer> recordingOptions;
 	SendableChooser<Integer> autoSelection;
@@ -61,9 +63,18 @@ public class Robot extends IterativeRobot {
 	
 	Spark ratchet;
 	Solenoid elevatorArms;
+	Solenoid elevatorArmsUp;  //MEO
+	Solenoid elevatorArmsDn;  //MEO
+	Solenoid grabber;
+	Solenoid grabberIn;  // MEO
+	Solenoid grabberOut;  // MEO
 	Compressor compressor;
 	
-	boolean elevatorArmState;
+	Talon pusherMotorLeft;
+	Talon pusherMotorRight;
+	
+	boolean eleArmState;
+	boolean grabArmState;
 	
 	@Override
 	public void robotInit() {
@@ -77,6 +88,7 @@ public class Robot extends IterativeRobot {
 		
 		//Init Joystick
 		driveJoystick = new XboxController(0);
+		controllerJoystick = new Joystick(0);
 		
 		autoSelection = new SendableChooser<Integer>();
 		autoSelection.addDefault("0, 0, 0", 0);
@@ -87,7 +99,6 @@ public class Robot extends IterativeRobot {
 		autoSelection.addObject("Replay Right", 4);
 		
 		SmartDashboard.putData("Auto Selection", autoSelection);
-		
 
 		recordingOptions = new SendableChooser<Integer>();
 		recordingOptions.addDefault("Record Test", 0);
@@ -102,11 +113,19 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putData("Team Selection", myTeam);
 		
 		ratchet = new Spark(4);
-		elevatorArms = new Solenoid(1);
+//		elevatorArmsDn = new Solenoid(0);  //MEO
+		elevatorArms = new DoubleSolenoid(0, 1); //MEO
+//		elevatorArms = new Solenoid(1); MEO
+//		grabber = new Solenoid(2);  MEO
+		grabber = new DoubleSolenoid(2, 3);  //MEO
+//		grabberIn = new Solenoid(2);  //MEO
+//		grabberOut = new Solenoid(3);  //MEO
 		compressor = new Compressor(0);
+		pusherMotorLeft = new Talon(5);
+		pusherMotorRight = new Talon(6);
 		
 		//Enable the compressor
-		compressor.setClosedLoopControl(true);
+		compressor.start();
 		
 		InitCameras();
 	}
@@ -114,10 +133,15 @@ public class Robot extends IterativeRobot {
 	void InitCameras () {
 		
 		new Thread(() -> {
-			UsbCamera front = CameraServer.getInstance().startAutomaticCapture(0);
+			UsbCamera front = CameraServer.getInstance().startAutomaticCapture(1);
 			front.setFPS(cameraFPS);
-			front.setBrightness(50);
+			front.setBrightness(40);
 			front.setResolution(cameraResolutionX, cameraResolutionY);
+			
+			UsbCamera top = CameraServer.getInstance().startAutomaticCapture(0);
+			top.setFPS(cameraFPS);
+			top.setBrightness(40);
+			top.setResolution(cameraResolutionX, cameraResolutionY);
 		}).start();
 		
 		/*
@@ -233,7 +257,7 @@ public class Robot extends IterativeRobot {
 	}
 	
 	double[] GetUserInput () {
-		double[] out = new double[4];
+		double[] out = new double[5];
 		
 		double turn = -driveJoystick.getX(Hand.kLeft);
 		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
@@ -243,31 +267,35 @@ public class Robot extends IterativeRobot {
 			turn = 0;
 		}
 		
-		double pov = driveJoystick.getPOV(0);
-		double ratchetOut = 0;
-		
-		if(pov == 0) {
-			ratchetOut = 1;
-		}
-		if(pov == 180) {
-			ratchetOut = -1;
-		}
-		
 		if(driveJoystick.getRawButton(5) == true) {
 			turn = turn * 0.5;
 		}
 		
-		//Control raising and lowering the arm
-		if(driveJoystick.getRawButtonPressed(6) == true) {
-			elevatorArmState = !elevatorArmState;
-		}
-		int eleArmStateDouble = (elevatorArmState) ? 1 : 0;
 		
+		if(controllerJoystick.getRawButtonPressed(2) == true) {
+			//use the elevator with the Y button
+			eleArmState = !eleArmState;
+		}
+		if(controllerJoystick.getRawButtonPressed(1) == true) {
+			//use the grab arm with the X button
+			grabArmState = !grabArmState;
+		}
+		
+		double pusherArms = 0;
+		if(driveJoystick.getRawButton(4)) {
+			//Pull in with the a button
+			pusherArms = -1;
+		}
+		if(driveJoystick.getRawButton(3)) {
+			//Push out with the b button
+			pusherArms = 1;
+		}
 		
 		out[0] = speed;
 		out[1] = turn;
-		out[2] = ratchetOut;
-		out[3] = eleArmStateDouble;
+		out[2] = pusherArms;
+		out[3] = (eleArmState) ? 1 : 0;
+		out[4] = (grabArmState) ? 1 : 0;
 		
 		return out;
 	}
@@ -275,7 +303,6 @@ public class Robot extends IterativeRobot {
 	void DoMovement (double[] inputs) {
 		driveController.DriveRelative(inputs[0], inputs[1]);
 		
-		ratchet.set(inputs[2]);
 		
 		boolean elevatorState = false;
 		if(inputs[3] == 1) {
@@ -284,7 +311,28 @@ public class Robot extends IterativeRobot {
 			elevatorState = false;
 		}
 		
+		boolean armState = false;
+		if(inputs[4] == 1) {
+			armState = true;
+		} else {
+			armState = false;
+		}
+		
+		grabber.set(armState);
+		grabberIn.set(armState);  //MEO
+		grabberOut.set(!armState);  //MEO
 		elevatorArms.set(elevatorState);
+		elevatorArmsUp.set(elevatorState);  //MEO
+		elevatorArmsDn.set(!elevatorState);  //MEO
+		
+		SmartDashboard.putNumber("Input 0", inputs[0]);
+		SmartDashboard.putNumber("Input 1", inputs[1]);
+		SmartDashboard.putNumber("Input 2", inputs[2]);
+		SmartDashboard.putNumber("Input 3", inputs[3]);
+		SmartDashboard.putNumber("Input 4", inputs[4]);
+		
+		pusherMotorLeft.set(-inputs[2]);
+		pusherMotorRight.set(inputs[2]);
 	}
 	
 	/**

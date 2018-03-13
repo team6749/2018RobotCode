@@ -13,18 +13,18 @@ public class DriveController {
 	
 	public boolean enableRotationCompensation = true;
 	
-	double speedScale = 1f;
-	double rotScale = 0.6f;
+	double speedScale = 0.8f;
+	double rotScale = 0.45f;
 	
 	double currentForward;
 	double currentY;
 	double currentRot;
 	
 	double forwardThreshold = 0.05f;
-	double rotationThreshold = 0.1f;
-		
+	double rotationThreshold = 0.15f;
+	
 	double forwardAcceleration = 0.06f;
-	double rotationAcceleration = 0.03f;
+	double rotationAcceleration = 0.05f;
 	
 	SpeedController rightFront;
 	SpeedController rightBack;
@@ -61,7 +61,7 @@ public class DriveController {
 			//If we are within the amount needed to clip then clip the value
 			if(Math.abs(rotationInput - currentRot) < rotationAcceleration) {
 				currentRot = rotationInput;
-			} 
+			}
 		}
 		
 		//Check forward threshold
@@ -95,11 +95,18 @@ public class DriveController {
 		double rightOutput = 0;
 		double leftOutput = 0;
 		
-		SmartDashboard.putNumber("speedlol", speed);
-		SmartDashboard.putNumber("rotationlol", rotation);
+		SmartDashboard.putNumber("Drive_Speed", speed);
+		SmartDashboard.putNumber("Drive_Rot", rotation);
 		
 		//Check my prefrences to see if I sould even compensate
 		enableRotationCompensation = Preferences.getInstance().getBoolean("EnableDriveAssist", false);
+		
+		if(Preferences.getInstance().getBoolean("InvertSpeed", false)) {
+			speed = -speed;
+		}
+		if(Preferences.getInstance().getBoolean("InvertRotation", false)) {
+			rotation = -rotation;
+		}
 		
 		//Process movement if you are not turning to stay straight
 		if(Math.abs(rotation) < rotationThreshold && Math.abs(speed) > forwardThreshold && enableRotationCompensation) {

@@ -46,7 +46,7 @@ public class AutoReplay {
 		} else {
 			//We have finished because there is nothing else to do
 			isReplaying = false;
-			return null;
+			return new double[] {0, 0, 0, 0, 0};
 		}
 	}
 	
