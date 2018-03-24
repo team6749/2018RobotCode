@@ -20,6 +20,8 @@ import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -59,15 +61,11 @@ public class Robot extends IterativeRobot {
 	
 	SendableChooser<Integer> recordingOptions;
 	SendableChooser<Integer> autoSelection;
-	SendableChooser<Integer> myTeam;
+	SendableChooser<Integer> scaleOwnership;
 	
 	Spark ratchet;
-	Solenoid elevatorArms;
-	Solenoid elevatorArmsUp;  //MEO
-	Solenoid elevatorArmsDn;  //MEO
-	Solenoid grabber;
-	Solenoid grabberIn;  // MEO
-	Solenoid grabberOut;  // MEO
+	DoubleSolenoid elevatorArms;
+	DoubleSolenoid grabber;
 	Compressor compressor;
 	
 	Talon pusherMotorLeft;
@@ -88,38 +86,29 @@ public class Robot extends IterativeRobot {
 		
 		//Init Joystick
 		driveJoystick = new XboxController(0);
-		controllerJoystick = new Joystick(0);
+		controllerJoystick = new Joystick(1);
 		
 		autoSelection = new SendableChooser<Integer>();
-		autoSelection.addDefault("0, 0, 0", 0);
-		
-		autoSelection.addObject("Replay Test", 1);
-		autoSelection.addObject("Replay Left", 2);
-		autoSelection.addObject("Replay Middle", 3);
-		autoSelection.addObject("Replay Right", 4);
-		
+		autoSelection.addDefault("0, 0, 0 No Replay", 0);
+		autoSelection.addObject("Test", 1);
+		autoSelection.addObject("FMS", 2);
 		SmartDashboard.putData("Auto Selection", autoSelection);
 
 		recordingOptions = new SendableChooser<Integer>();
-		recordingOptions.addDefault("Record Test", 0);
-		recordingOptions.addObject("Record Left", 1);
-		recordingOptions.addObject("Record Middle", 2);
-		recordingOptions.addObject("Record Right", 3);
+		recordingOptions.addDefault("Test", 0);
+		recordingOptions.addObject("Left", 1);
+		recordingOptions.addObject("Middle", 2);
+		recordingOptions.addObject("Right", 3);
 		SmartDashboard.putData("Recording Selection", recordingOptions);
 		
-		myTeam = new SendableChooser<Integer>();
-		myTeam.addDefault("Red", 0);
-		myTeam.addDefault("Blue", 1);
-		SmartDashboard.putData("Team Selection", myTeam);
+		scaleOwnership = new SendableChooser<Integer>();
+		scaleOwnership.addDefault("Left scale owned", 0);
+		scaleOwnership.addDefault("Right scale owned", 1);
+		SmartDashboard.putData("Scale Ownership", scaleOwnership);
 		
 		ratchet = new Spark(4);
-//		elevatorArmsDn = new Solenoid(0);  //MEO
-		elevatorArms = new DoubleSolenoid(0, 1); //MEO
-//		elevatorArms = new Solenoid(1); MEO
-//		grabber = new Solenoid(2);  MEO
-		grabber = new DoubleSolenoid(2, 3);  //MEO
-//		grabberIn = new Solenoid(2);  //MEO
-//		grabberOut = new Solenoid(3);  //MEO
+		elevatorArms = new DoubleSolenoid(4, 5);
+		grabber = new DoubleSolenoid(6, 7);
 		compressor = new Compressor(0);
 		pusherMotorLeft = new Talon(5);
 		pusherMotorRight = new Talon(6);
@@ -191,8 +180,8 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void autonomousInit() {
+		//TODO replay proper position
 		//Reset the gps
-		int team = (int) myTeam.getSelected();
 		int autoMode = (int) autoSelection.getSelected();
 		
 		if(autoMode == 0) {
@@ -257,7 +246,7 @@ public class Robot extends IterativeRobot {
 	}
 	
 	double[] GetUserInput () {
-		double[] out = new double[5];
+		double[] out = new double[9];  // HERE
 		
 		double turn = -driveJoystick.getX(Hand.kLeft);
 		double speed = driveJoystick.getTriggerAxis(Hand.kLeft) - driveJoystick.getTriggerAxis(Hand.kRight);
@@ -271,23 +260,35 @@ public class Robot extends IterativeRobot {
 			turn = turn * 0.5;
 		}
 		
-		
 		if(controllerJoystick.getRawButtonPressed(2) == true) {
-			//use the elevator with the Y button
 			eleArmState = !eleArmState;
+			out[5] = 1; //Is value dirty
 		}
+		
 		if(controllerJoystick.getRawButtonPressed(1) == true) {
-			//use the grab arm with the X button
 			grabArmState = !grabArmState;
+			out[6] = 1; //Is value dirty
+		}
+		
+		double grabberArmsOut = 0; // HERE
+		double grabberArmsIn = 0;  // HERE
+		
+		if(controllerJoystick.getRawButton(8)) {
+			grabberArmsOut = 1;
+			grabberArmsIn = 0;
+		}
+		
+		if(controllerJoystick.getRawButton(7)) {
+			grabberArmsOut = 0;
+			grabberArmsIn = 1;
 		}
 		
 		double pusherArms = 0;
-		if(driveJoystick.getRawButton(4)) {
-			//Pull in with the a button
+		if(controllerJoystick.getRawButton(4)) {
 			pusherArms = -1;
 		}
-		if(driveJoystick.getRawButton(3)) {
-			//Push out with the b button
+		
+		if(controllerJoystick.getRawButton(3)) {
 			pusherArms = 1;
 		}
 		
@@ -296,6 +297,8 @@ public class Robot extends IterativeRobot {
 		out[2] = pusherArms;
 		out[3] = (eleArmState) ? 1 : 0;
 		out[4] = (grabArmState) ? 1 : 0;
+		out[7] = grabberArmsOut;  //HERE
+		out[8] = grabberArmsIn;  //HERE
 		
 		return out;
 	}
@@ -318,21 +321,31 @@ public class Robot extends IterativeRobot {
 			armState = false;
 		}
 		
-		grabber.set(armState);
-		grabberIn.set(armState);  //MEO
-		grabberOut.set(!armState);  //MEO
-		elevatorArms.set(elevatorState);
-		elevatorArmsUp.set(elevatorState);  //MEO
-		elevatorArmsDn.set(!elevatorState);  //MEO
+		elevatorArms.set(GetValueFromBool(true)); //elevatorState
 		
-		SmartDashboard.putNumber("Input 0", inputs[0]);
-		SmartDashboard.putNumber("Input 1", inputs[1]);
-		SmartDashboard.putNumber("Input 2", inputs[2]);
-		SmartDashboard.putNumber("Input 3", inputs[3]);
-		SmartDashboard.putNumber("Input 4", inputs[4]);
+		if(inputs[7] == 1) {
+			grabber.set(DoubleSolenoid.Value.kReverse); 
+		}
+		
+		if((inputs[7] == 0) && (inputs[8] == 1)) {
+			grabber.set(DoubleSolenoid.Value.kForward); 
+		}
+		
+		if((inputs[7] == 0) && (inputs[8] == 0)) {
+			grabber.set(DoubleSolenoid.Value.kOff); 
+		}
 		
 		pusherMotorLeft.set(-inputs[2]);
 		pusherMotorRight.set(inputs[2]);
+	}
+	
+	
+	Value GetValueFromBool (boolean input) {
+		if(input == true) {
+			return DoubleSolenoid.Value.kForward;
+		} else {
+			return DoubleSolenoid.Value.kReverse;
+		}
 	}
 	
 	/**
@@ -347,7 +360,6 @@ public class Robot extends IterativeRobot {
 			
 			if(driveJoystick.getRawButton(2) == true) {
 				autoRecord.StopAndStoreRecording();
-				SmartDashboard.putBoolean("RecordingEnded", true);
 			}
 		}
 	}
@@ -355,19 +367,34 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void testInit() {
 		int recordMode = (int) recordingOptions.getSelected();
+		int ownershipInt = (int) scaleOwnership.getSelected(); //0 - left owned = true, 1 - right owned = false
+		boolean ownership = false;
+		if(ownershipInt == 0) {
+			ownership = true;
+		} else {
+			ownership = false;
+		}
 		
 		switch (recordMode) {
 		case 0:
 			autoRecord.StartRecording("test_recording");
 			break;
 		case 1:
-			autoRecord.StartRecording("left_recording");
+			if(ownership) {
+				autoRecord.StartRecording("left_owned_recording");
+			} else {
+				autoRecord.StartRecording("left_notOwned_recording");
+			}
 			break;
 		case 2:
 			autoRecord.StartRecording("middle_recording");
 			break;
 		case 3:
-			autoRecord.StartRecording("right_recording");
+			if(ownership) {
+				autoRecord.StartRecording("right_notOwned_recording");
+			} else {
+				autoRecord.StartRecording("right_owned_recording");
+			}
 			break;
 		}
 	}

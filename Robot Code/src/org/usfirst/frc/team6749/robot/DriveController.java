@@ -95,9 +95,6 @@ public class DriveController {
 		double rightOutput = 0;
 		double leftOutput = 0;
 		
-		SmartDashboard.putNumber("Drive_Speed", speed);
-		SmartDashboard.putNumber("Drive_Rot", rotation);
-		
 		//Check my prefrences to see if I sould even compensate
 		enableRotationCompensation = Preferences.getInstance().getBoolean("EnableDriveAssist", false);
 		
